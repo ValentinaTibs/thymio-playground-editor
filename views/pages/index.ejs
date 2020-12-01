@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <% include ../partials/header.ejs %>
+</head>
+<style type="text/css">
+ #c {
+      width: 100%;
+      height: 100%;
+    }
+</style>
+<body>
+    <input type="file" name="file" id="file">
+    <canvas id="c"></canvas>
+
+</body>
+
+<script type="module">
+
+
+import * as THREE from '/resources/threejs/r122/build/three.module.js';
+import {OrbitControls} from '/resources/threejs/r122/examples/jsm/controls/OrbitControls.js';
+import {GUI} from '/3rdparty/dat.gui.module.js';
+import {OBJLoader2} from '/resources/threejs/r122/examples/jsm/loaders/OBJLoader2.js';
+import {MTLLoader} from '/resources/threejs/r122/examples/jsm/loaders/MTLLoader.js';
+import {MtlObjBridge} from '/resources/threejs/r122/examples/jsm/loaders/obj2/bridge/MtlObjBridge.js';
+
+const scene = new THREE.Scene();
+const gui = new GUI();
+var   selected_mesh = new THREE.MeshPhongMaterial();
+var   camera = new THREE.PerspectiveCamera();
+
+function makeXYZGUI(gui, vector3, name, onChangeFn) 
+{
+  const folder = gui.addFolder(name);
+  folder.add(vector3, 'x', -10, 10).onChange(onChangeFn);
+  folder.add(vector3, 'y', 0, 10).onChange(onChangeFn);
+  folder.add(vector3, 'z', -10, 10).onChange(onChangeFn);
+  folder.open();
+}
+
+function addThymio(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
+{
+    const mtlLoader = new MTLLoader();
+    mtlLoader.load('resources/models/windmill/windmill-fixed.mtl', (mtlParseResult) => {
+      const objLoader = new OBJLoader2();
+      const materials =  MtlObjBridge.addMaterialsFromMtlLoader(mtlParseResult);
+      materials.Material.side = THREE.DoubleSide;
+      objLoader.addMaterials(materials);
+      objLoader.load('resources/models/windmill/windmill.obj', (root) => {
+        scene.add(root);
+      });
+    });
+}
+
+function addCamera(gui, x_pos,y_pos,altitude,yaw,pitch){
+  const fov = 45;
+  const aspect = 2;  // the canvas default
+  const near = 0.1;
+  const far = 100;
+  camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.set(0, 10, 20);
+
+  const canvas = document.querySelector('#c');
+  const controls = new OrbitControls(camera, canvas);
+  controls.target.set(0, 5, 0);
+  controls.update();
+
+
+};
+
+
+function addCylinder(gui,x_pos,y_pos,height,ray) 
+{
+  const geometry = new THREE.CylinderGeometry(ray,ray,100, height );
+  const material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+  const cylinder = new THREE.Mesh( geometry, material );
+  scene.add( cylinder );
+  cylinder.position.set(x_pos, 0, y_pos);
+  // makeXYZGUI(gui, cube.position, String(Math.random()));
+  // makeXYZGUI(gui, cube.rotation, "Rot"+String(Math.random()));
+}
+
+
+function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle) 
+{
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  // const wall_geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+  const wall_loader = new THREE.TextureLoader();
+  const wall_texture = wall_loader.load('resources/images/wall.jpg');
+  const wall_geometry = new THREE.BoxGeometry(x_scale, z_scale, y_scale);
+  const wall_material = new THREE.MeshPhongMaterial({
+    map: wall_texture,
+    side: THREE.DoubleSide,
+  });
+
+  const cube = new THREE.Mesh(wall_geometry, wall_material);
+  cube.position.set(x_pos,0,y_pos);
+  cube.rotation.set(0,angle,0);
+
+  scene.add(cube);
+  makeXYZGUI(gui, cube.position, String(Math.random()));
+  makeXYZGUI(gui, cube.rotation, "Rot"+String(Math.random()));
+
+}
+
+
+function main() {
+  
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas});
+
+  var options = {
+    velx: 0,
+    vely: 0,
+    camera: {
+      speed: 0.0001
+    },
+    load: function() {
+      this.velx = 0;
+      this.vely = 0;
+    }
+  };
+
+  addCamera(0, 0, 0, 0, 0, 0);
+
+ 
+
+  scene.background = new THREE.Color('black');
+  var mesh = new THREE.Mesh();
+  {
+    const planeSize = 40;
+
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load('resources/images/checker.png');
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.NearestFilter;
+    const repeats = planeSize / 2;
+    texture.repeat.set(repeats, repeats);
+
+    const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+    const planeMat = new THREE.MeshPhongMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+    });
+    mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.rotation.x = Math.PI * -.5;
+    scene.add(mesh);
+  }
+
+  class ColorGUIHelper {
+    constructor(object, prop) {
+      this.object = object;
+      this.prop = prop;
+    }
+    get value() {
+      return `#${this.object[this.prop].getHexString()}`;
+    }
+    set value(hexString) {
+      this.object[this.prop].set(hexString);
+    }
+  }
+
+// ------ LIGHTS  ------ 
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light1 = new THREE.PointLight(color, intensity);
+    light1.position.set(10, 10, 0);
+    scene.add(light1);
+    const light2 = new THREE.PointLight(color, intensity);
+    light2.position.set(-10, 10, 0);
+    scene.add(light2);
+
+    const helper = new THREE.PointLightHelper(light1);
+    scene.add(helper);
+    const helper2 = new THREE.PointLightHelper(light2);
+    scene.add(helper2);
+
+    function updateLight() {
+      helper.update();
+    }
+
+    // cube.position.set(10, 10, 0);
+    // cube.rotation.set(rand(Math.PI), rand(Math.PI), 0);
+    // cube.scale.set(rand(3, 6), rand(3, 6), rand(3, 6));
+
+// ------ GUI  ------ 
+    gui.addColor(new ColorGUIHelper(light1, 'color'), 'value').name('color');
+    gui.add(light1, 'intensity', 0, 2, 0.01);
+    gui.add(light1, 'distance', 0, 40).onChange(updateLight);
+    gui.add(options, 'load');
+
+    // makeXYZGUI(gui, light1.position, 'position');
+    // makeXYZGUI(gui, light2.position, 'position2');
+    
+  }
+
+  class PickHelper {
+    constructor() {
+      this.raycaster = new THREE.Raycaster();
+      this.pickedObject = null;
+      this.pickedObjectSavedColor = 0;
+    }
+    pick(normalizedPosition, scene, camera) {
+      var time = 0.2;
+      // restore the color if there is a picked object
+      if (this.pickedObject) {
+        this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
+        this.pickedObject = undefined;
+      }
+
+      // cast a ray through the frustum
+      this.raycaster.setFromCamera(normalizedPosition, camera);
+      // get the list of objects the ray intersected
+      const intersectedObjects = this.raycaster.intersectObjects(scene.children);
+      if (intersectedObjects.length) {
+        // pick the first object. It's the closest one
+        this.pickedObject = intersectedObjects[0].object;
+        // save its color
+        this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
+        // set its emissive color to flashing red/yellow
+        this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
+      }
+    }
+  }
+   
+ function clearPickPosition() {
+    // unlike the mouse which always has a position
+    // if the user stops touching the screen we want
+    // to stop picking. For now we just pick a value
+    // unlikely to pick something
+    pickPosition.x = -100000;
+    pickPosition.y = -100000;
+  }
+
+  function setPickPosition(event) {
+    const pos = getCanvasRelativePosition(event);
+    pickPosition.x = (pos.x / canvas.width ) *  2 - 1;
+    pickPosition.y = (pos.y / canvas.height) * -2 + 1;  // note we flip Y
+  }
+
+
+  const pickPosition = {x: 0, y: 0};
+  const pickHelper = new PickHelper();
+  clearPickPosition();
+
+
+
+  function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+  }
+
+  function render() {
+
+      if (resizeRendererToDisplaySize(renderer)) {
+        const canvas = renderer.domElement;
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+      }
+
+    pickHelper.pick(pickPosition, scene, camera);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+
+    requestAnimationFrame(render);
+  }
+
+
+  main();
+
+  document.getElementById('file').onchange = function(){
+
+  var file = this.files[0];
+
+  var reader = new FileReader();
+  reader.onload = function(progressEvent){
+    // Entire file
+    var parser = new DOMParser();
+    var xmlDoc =  parser.parseFromString(this.result,"text/xml");
+
+    var pg_walls = xmlDoc.getElementsByTagName("wall");
+      
+      for (var i = 0, len = pg_walls.length; i < len; i++) {
+        
+        var x_pos = Number(pg_walls[i].getAttribute('x'))/ 10;
+        var y_pos = Number(pg_walls[i].getAttribute('y'))/ 10;
+        var x_scale = Number(pg_walls[i].getAttribute('l1')) / 10;
+        var y_scale = Number(pg_walls[i].getAttribute('l2'))/ 10;
+        var z_scale = Number(pg_walls[i].getAttribute('h'))/ 10;
+        var angle = Number(pg_walls[i].getAttribute('angle'));
+
+        addWall(gui, x_pos,y_pos,x_scale,y_scale,z_scale,angle);
+
+      }
+
+    var pg_camera = xmlDoc.getElementsByTagName("camera")[0];
+    {
+      var x_pos = Number(pg_camera.getAttribute('x'))/ 10;
+        var y_pos = Number(pg_camera.getAttribute('y'))/ 10;
+        var altitude = Number(pg_camera.getAttribute('altitude'))/ 10;
+        var yaw = Number(pg_camera.getAttribute('yaw'))/ 10;
+        var pitch = Number(pg_camera.getAttribute('pitch'))/ 10;
+        addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
+    }
+
+
+
+      var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
+      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+        var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
+        var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
+        var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
+        var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
+
+        addCylinder(gui,x_pos,y_pos,height,ray);
+
+      }
+
+  };
+  reader.readAsText(file);
+};
+
+
+</script>
+</html>
