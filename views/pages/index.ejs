@@ -32,15 +32,12 @@ var   selected_mesh = new THREE.MeshPhongMaterial();
 var   camera = new THREE.PerspectiveCamera();
 var   mesh = new THREE.Mesh();
 
-function makeXYZGUI(gui, vector3, name, onChangeFn, scale) 
+function makeXYZGUI(gui, vector3, name, onChangeFn) 
 {
   const folder = gui.addFolder(name);
-
-  folder.add(vector3, 'x', 0.001, 1).onChange(onChangeFn);
-  folder.add(vector3, 'y', 0.001, 1).onChange(onChangeFn);
-  folder.add(vector3, 'z', 0.001, 1).onChange(onChangeFn);
-
-
+  folder.add(vector3, 'x', -20, 40).onChange(onChangeFn);
+  folder.add(vector3, 'y', -20, 40).onChange(onChangeFn);
+  folder.add(vector3, 'z', -20, 40).onChange(onChangeFn);
   folder.open();
 }
 
@@ -51,8 +48,9 @@ function addThymio(gui,x_pos,y_pos,port,angle,name,id)
   stlLoader.load( '/resources/models/thymio_2/a_thymio_2.stl', function ( geometry ) {
     const material = new THREE.MeshPhongMaterial( { color: 0xff5533, specular: 0x111111, shininess: 200 } );
     var model = new THREE.Mesh( geometry, material );
-    model.position.set(x_pos,0,y_pos);
+    model.position.set(x_pos, 0, y_pos);
     model.rotation.set(0,angle,0);    
+
     model.scale.set(0.01, 0.01, 0.01);
     makeXYZGUI(gui, model.position, String(Math.random()));
     scene.add( model );
@@ -62,48 +60,48 @@ function addThymio(gui,x_pos,y_pos,port,angle,name,id)
 function addEpuck()
 {
   const mtlLoader = new MTLLoader();
-  mtlLoader.load('/resources/models/epuck/epuck.mtl', (mtlParseResult) => {
+  mtlLoader.load('resources/models/epuck/epuck.mtl', (mtlParseResult) => {
     var objLoader = new OBJLoader2();
-    objLoader.load( '/resources/models/epuck/epuck.obj', function ( geometry ) {
+    objLoader.load( 'resources/models/epuck/epuck.obj', function ( geometry ) {
     var model = new THREE.Mesh( geometry, mtlParseResult );
-    model.position.set(x_pos,0,y_pos);
+    model.position.set(x_pos, 0, y_pos);
     model.rotation.set(0,angle,0);    
     // model.scale.set(0.08, 0.08, 0.08);
-    makeXYZGUI(gui, model.position, String(Math.random()));
+    //makeXYZGUI(gui, model.position, String(Math.random()));
     scene.add( model );
     });
   });
 }
 
 function addCamera(gui, x_pos,y_pos,altitude,yaw,pitch){
+  console.log( x_pos,y_pos,altitude,yaw,pitch)
   const fov = 45;
   const aspect = 2;  // the canvas default
   const near = 0.1;
   const far = 100;
   camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 10, 20);
+  // camera.rotation.x
 
   const canvas = document.querySelector('#c');
   const controls = new OrbitControls(camera, canvas);
   controls.target.set(0, 5, 0);
   controls.update();
 
+  makeXYZGUI(gui, camera.rotation, "Camera rotation");
+  makeXYZGUI(gui, camera.position, "Camera position");
 
 };
 
 
 function addCylinder(gui,x_pos,y_pos,height,ray) 
 {
-  // const geometry = new THREE.CylinderGeometry(ray,ray,100, height );
-  // const material = new THREE.MeshPhongMaterial( { color: 0xffff00, specular: 0x111111, shininess: 200 } );
-  // const cylinder = new THREE.Mesh( geometry, material );
-  // scene.add( cylinder );
-  // cylinder.position.set(x_pos, 0, y_pos);
-  console.log(x_pos,y_pos,height,ray) 
+
   const geometry = new THREE.CylinderGeometry( ray, ray, height, 32 );
   const material = new THREE.MeshPhongMaterial( { color: 0xffff00, specular: 0x111111, shininess: 30 } );
   const cylinder = new THREE.Mesh( geometry, material );
   cylinder.position.set(x_pos, 0, y_pos);
+  cylinder.rotation.set(0,0,0);    
   scene.add( cylinder );
 
   // makeXYZGUI(gui, cube.position, String(Math.random()));
@@ -113,19 +111,14 @@ function addCylinder(gui,x_pos,y_pos,height,ray)
 
 function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle) 
 {
-  const boxWidth = 1;
-  const boxHeight = 1;
-  const boxDepth = 1;
-  // const wall_geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
-
   const wall_geometry = new THREE.BoxGeometry(x_scale, z_scale, y_scale);
   const wall_material = new THREE.MeshPhongMaterial( { color: 0xf335533, specular: 0x111111, shininess: 200 } );
 
   const cube = new THREE.Mesh(wall_geometry, wall_material);
-  cube.position.set(x_pos,0,y_pos);
-  cube.rotation.set(0,angle,0);
-
+  cube.position.set(x_pos, 0, y_pos);
+  cube.rotation.set(0,angle,0);    
   scene.add(cube);
+
   makeXYZGUI(gui, cube.position, String(Math.random()));
   makeXYZGUI(gui, cube.rotation, "Rot"+String(Math.random()));
 
@@ -133,20 +126,22 @@ function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
 
 
 function addPlane(gui,w,h,color,groundTexture)
-{
+{ 
     const planeSize = w*h;
-    console.log(planeSize);
 
     const loader = new THREE.TextureLoader();
-    if(groundTexture)
-      console.log("C'ho testura");
-    const texture = loader.load('resources/images/checker.png');
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.magFilter = THREE.NearestFilter;
-    const repeats = planeSize / 2;
-    texture.repeat.set(repeats, repeats);
-
+    var texture;
+    if(groundTexture)    
+      texture = loader.load('resources/data/logo_thymio_couleur_fond.png');
+    else {
+      texture = loader.load('resources/images/checker.png');
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.magFilter = THREE.NearestFilter;
+      const repeats = planeSize / 2;
+      texture.repeat.set(repeats, repeats);
+    }
+ 
     const planeGeo = new THREE.PlaneBufferGeometry(w, h);
     const planeMat = new THREE.MeshPhongMaterial({
       map: texture,
@@ -154,7 +149,17 @@ function addPlane(gui,w,h,color,groundTexture)
     });
     mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.rotation.x = Math.PI * -.5;
-    scene.add(mesh);
+    
+    if(scene.children[0]){
+      scene.children[0] = mesh;
+      makeXYZGUI(gui, mesh.rotation, "plane rotation");
+    }
+    else{
+      scene.add(mesh);
+      
+    }
+
+    console.log(scene.children[0]);
 }
 
 function main() {
@@ -174,7 +179,7 @@ function main() {
     }
   };
 
-  addCamera(0, 0, 0, 0, 0, 0);
+  addCamera(gui, 0, 0, 0, 0, 0);
 
   scene.background = new THREE.Color('black');
   addPlane(gui, 6.32,6.32)
@@ -203,6 +208,7 @@ function main() {
     light2.position.set(-10, 10, 0);
     scene.add(light2);
 
+
     const helper = new THREE.PointLightHelper(light1);
     scene.add(helper);
     const helper2 = new THREE.PointLightHelper(light2);
@@ -222,8 +228,6 @@ function main() {
     gui.add(light1, 'distance', 0, 40).onChange(updateLight);
     gui.add(options, 'load');
 
-    // makeXYZGUI(gui, light1.position, 'position');
-    // makeXYZGUI(gui, light2.position, 'position2');
     
   }
 
@@ -318,9 +322,8 @@ function main() {
     // Entire file
     var parser = new DOMParser();
     var xmlDoc =  parser.parseFromString(this.result,"text/xml");
-
-  
     var pg_camera = xmlDoc.getElementsByTagName("camera")[0];
+
     if(pg_camera)
     {
       var x_pos = Number(pg_camera.getAttribute('x'))/ 10;
@@ -328,7 +331,7 @@ function main() {
         var altitude = Number(pg_camera.getAttribute('altitude'))/ 10;
         var yaw = Number(pg_camera.getAttribute('yaw'))/ 10;
         var pitch = Number(pg_camera.getAttribute('pitch'))/ 10;
-        addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
+        //addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
     }
 
     var pg_plane = xmlDoc.getElementsByTagName("world")[0];
@@ -337,7 +340,7 @@ function main() {
         var x_pos = Number(pg_plane.getAttribute('w'))/ 10;
         var y_pos = Number(pg_plane.getAttribute('h'))/ 10;
         var color = Number(pg_plane.getAttribute('color'));
-        var groundTexture = Number(pg_plane.getAttribute('groundTexture'));
+        var groundTexture = pg_plane.getAttribute('groundTexture');
         addPlane(gui,x_pos,y_pos,color,groundTexture);
     }
 
