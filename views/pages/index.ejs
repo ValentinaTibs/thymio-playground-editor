@@ -149,14 +149,14 @@ function addPlane(gui,w,h,color,groundTexture)
     });
     mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.rotation.x = Math.PI * -.5;
-    
+    mesh.position.set(w/2,0,h/2);
+    //2do remove here and manage with a reset scene
     if(scene.children[0]){
       scene.children[0] = mesh;
       makeXYZGUI(gui, mesh.rotation, "plane rotation");
     }
     else{
       scene.add(mesh);
-      
     }
 
     console.log(scene.children[0]);
