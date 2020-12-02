@@ -35,9 +35,12 @@ var   mesh = new THREE.Mesh();
 function makeXYZGUI(gui, vector3, name, onChangeFn, scale) 
 {
   const folder = gui.addFolder(name);
+
   folder.add(vector3, 'x', 0.001, 1).onChange(onChangeFn);
   folder.add(vector3, 'y', 0.001, 1).onChange(onChangeFn);
   folder.add(vector3, 'z', 0.001, 1).onChange(onChangeFn);
+
+
   folder.open();
 }
 
@@ -91,11 +94,18 @@ function addCamera(gui, x_pos,y_pos,altitude,yaw,pitch){
 
 function addCylinder(gui,x_pos,y_pos,height,ray) 
 {
-  const geometry = new THREE.CylinderGeometry(ray,ray,100, height );
-  const material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+  // const geometry = new THREE.CylinderGeometry(ray,ray,100, height );
+  // const material = new THREE.MeshPhongMaterial( { color: 0xffff00, specular: 0x111111, shininess: 200 } );
+  // const cylinder = new THREE.Mesh( geometry, material );
+  // scene.add( cylinder );
+  // cylinder.position.set(x_pos, 0, y_pos);
+  console.log(x_pos,y_pos,height,ray) 
+  const geometry = new THREE.CylinderGeometry( ray, ray, height, 32 );
+  const material = new THREE.MeshPhongMaterial( { color: 0xffff00, specular: 0x111111, shininess: 30 } );
   const cylinder = new THREE.Mesh( geometry, material );
-  scene.add( cylinder );
   cylinder.position.set(x_pos, 0, y_pos);
+  scene.add( cylinder );
+
   // makeXYZGUI(gui, cube.position, String(Math.random()));
   // makeXYZGUI(gui, cube.rotation, "Rot"+String(Math.random()));
 }
