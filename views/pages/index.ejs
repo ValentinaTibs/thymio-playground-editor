@@ -22,6 +22,7 @@ import * as THREE from '/resources/threejs/r122/build/three.module.js';
 import {OrbitControls} from '/resources/threejs/r122/examples/jsm/controls/OrbitControls.js';
 import {GUI} from '/3rdparty/dat.gui.module.js';
 import {OBJLoader2} from '/resources/threejs/r122/examples/jsm/loaders/OBJLoader2.js';
+import {STLLoader} from '/resources/threejs/r122/examples/jsm/loaders/STLLoader.js';
 import {MTLLoader} from '/resources/threejs/r122/examples/jsm/loaders/MTLLoader.js';
 import {MtlObjBridge} from '/resources/threejs/r122/examples/jsm/loaders/obj2/bridge/MtlObjBridge.js';
 
@@ -30,27 +31,30 @@ const gui = new GUI();
 var   selected_mesh = new THREE.MeshPhongMaterial();
 var   camera = new THREE.PerspectiveCamera();
 
-function makeXYZGUI(gui, vector3, name, onChangeFn) 
+function makeXYZGUI(gui, vector3, name, onChangeFn, scale) 
 {
   const folder = gui.addFolder(name);
-  folder.add(vector3, 'x', -10, 10).onChange(onChangeFn);
-  folder.add(vector3, 'y', 0, 10).onChange(onChangeFn);
-  folder.add(vector3, 'z', -10, 10).onChange(onChangeFn);
+  folder.add(vector3, 'x', 0.001, 1).onChange(onChangeFn);
+  folder.add(vector3, 'y', 0.001, 1).onChange(onChangeFn);
+  folder.add(vector3, 'z', 0.001, 1).onChange(onChangeFn);
   folder.open();
 }
 
-function addThymio(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
+function addThymio(gui,x_pos,y_pos,port,angle,name,id)
 {
-    const mtlLoader = new MTLLoader();
-    mtlLoader.load('resources/models/windmill/windmill-fixed.mtl', (mtlParseResult) => {
-      const objLoader = new OBJLoader2();
-      const materials =  MtlObjBridge.addMaterialsFromMtlLoader(mtlParseResult);
-      materials.Material.side = THREE.DoubleSide;
-      objLoader.addMaterials(materials);
-      objLoader.load('resources/models/windmill/windmill.obj', (root) => {
-        scene.add(root);
-      });
-    });
+
+  
+  var stlLoader = new STLLoader();
+  stlLoader.load( '/resources/models/thymio_2/a_thymio_2.stl', function ( geometry ) {
+    const material = new THREE.MeshPhongMaterial( { color: 0xff5533, specular: 0x111111, shininess: 200 } );
+    var model = new THREE.Mesh( geometry, material );
+    model.position.set(x_pos,0,y_pos);
+    model.rotation.set(0,angle,0);    
+    model.scale.set(0.01, 0.01, 0.01);
+    makeXYZGUI(gui, model.position, String(Math.random()));
+    scene.add( model );
+  });
+
 }
 
 function addCamera(gui, x_pos,y_pos,altitude,yaw,pitch){
@@ -89,13 +93,8 @@ function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
   const boxDepth = 1;
   // const wall_geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
 
-  const wall_loader = new THREE.TextureLoader();
-  const wall_texture = wall_loader.load('resources/images/wall.jpg');
   const wall_geometry = new THREE.BoxGeometry(x_scale, z_scale, y_scale);
-  const wall_material = new THREE.MeshPhongMaterial({
-    map: wall_texture,
-    side: THREE.DoubleSide,
-  });
+  const wall_material = new THREE.MeshPhongMaterial( { color: 0xf335533, specular: 0x111111, shininess: 200 } );
 
   const cube = new THREE.Mesh(wall_geometry, wall_material);
   cube.position.set(x_pos,0,y_pos);
@@ -200,34 +199,34 @@ function main() {
     
   }
 
-  class PickHelper {
-    constructor() {
-      this.raycaster = new THREE.Raycaster();
-      this.pickedObject = null;
-      this.pickedObjectSavedColor = 0;
-    }
-    pick(normalizedPosition, scene, camera) {
-      var time = 0.2;
-      // restore the color if there is a picked object
-      if (this.pickedObject) {
-        this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
-        this.pickedObject = undefined;
-      }
+  // class PickHelper {
+  //   constructor() {
+  //     this.raycaster = new THREE.Raycaster();
+  //     this.pickedObject = null;
+  //     this.pickedObjectSavedColor = 0;
+  //   }
+  //   pick(normalizedPosition, scene, camera) {
+  //     var time = 0.2;
+  //     // restore the color if there is a picked object
+  //     if (this.pickedObject) {
+  //       this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
+  //       this.pickedObject = undefined;
+  //     }
 
-      // cast a ray through the frustum
-      this.raycaster.setFromCamera(normalizedPosition, camera);
-      // get the list of objects the ray intersected
-      const intersectedObjects = this.raycaster.intersectObjects(scene.children);
-      if (intersectedObjects.length) {
-        // pick the first object. It's the closest one
-        this.pickedObject = intersectedObjects[0].object;
-        // save its color
-        this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
-        // set its emissive color to flashing red/yellow
-        this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
-      }
-    }
-  }
+  //     // cast a ray through the frustum
+  //     this.raycaster.setFromCamera(normalizedPosition, camera);
+  //     // get the list of objects the ray intersected
+  //     const intersectedObjects = this.raycaster.intersectObjects(scene.children);
+  //     if (intersectedObjects.length) {
+  //       // pick the first object. It's the closest one
+  //       this.pickedObject = intersectedObjects[0].object;
+  //       // save its color
+  //       this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
+  //       // set its emissive color to flashing red/yellow
+  //       this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
+  //     }
+  //   }
+  // }
    
  function clearPickPosition() {
     // unlike the mouse which always has a position
@@ -245,10 +244,9 @@ function main() {
   }
 
 
-  const pickPosition = {x: 0, y: 0};
-  const pickHelper = new PickHelper();
-  clearPickPosition();
-
+  // const pickPosition = {x: 0, y: 0};
+  // const pickHelper = new PickHelper();
+  // clearPickPosition();
 
 
   function resizeRendererToDisplaySize(renderer) {
@@ -270,7 +268,7 @@ function main() {
         camera.updateProjectionMatrix();
       }
 
-    pickHelper.pick(pickPosition, scene, camera);
+//    pickHelper.pick(pickPosition, scene, camera);
 
       renderer.render(scene, camera);
       requestAnimationFrame(render);
@@ -293,6 +291,18 @@ function main() {
     var parser = new DOMParser();
     var xmlDoc =  parser.parseFromString(this.result,"text/xml");
 
+    
+
+    var pg_camera = xmlDoc.getElementsByTagName("camera")[0];
+    {
+      var x_pos = Number(pg_camera.getAttribute('x'))/ 10;
+        var y_pos = Number(pg_camera.getAttribute('y'))/ 10;
+        var altitude = Number(pg_camera.getAttribute('altitude'))/ 10;
+        var yaw = Number(pg_camera.getAttribute('yaw'))/ 10;
+        var pitch = Number(pg_camera.getAttribute('pitch'))/ 10;
+        addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
+    }
+
     var pg_walls = xmlDoc.getElementsByTagName("wall");
       
       for (var i = 0, len = pg_walls.length; i < len; i++) {
@@ -308,27 +318,45 @@ function main() {
 
       }
 
-    var pg_camera = xmlDoc.getElementsByTagName("camera")[0];
-    {
-      var x_pos = Number(pg_camera.getAttribute('x'))/ 10;
-        var y_pos = Number(pg_camera.getAttribute('y'))/ 10;
-        var altitude = Number(pg_camera.getAttribute('altitude'))/ 10;
-        var yaw = Number(pg_camera.getAttribute('yaw'))/ 10;
-        var pitch = Number(pg_camera.getAttribute('pitch'))/ 10;
-        addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
-    }
+
+
+      // var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
+      // for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+      //   var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
+      //   var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
+      //   var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
+      //   var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
+
+      //   addCylinder(gui,x_pos,y_pos,height,ray);
+
+      // }
+
+      // var pg_thymios = xmlDoc.getElementsByTagName("robot");
+      // for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+      //   var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
+      //   var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
+      //   var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
+      //   var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
 
 
 
-      var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
-      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
-        var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
-        var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
-        var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
-        var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
+      // }
 
-        addCylinder(gui,x_pos,y_pos,height,ray);
-
+       var pg_robots = xmlDoc.getElementsByTagName("robot");
+      
+      for (var i = 0, len = pg_robots.length; i < len; i++) 
+      {
+        console.log(pg_robots[i])
+        var x_pos = Number(pg_robots[i].getAttribute('x'))/ 10;
+        var y_pos = Number(pg_robots[i].getAttribute('y'))/ 10;
+        var port = pg_robots[i].getAttribute('port');
+        var angle = Number(pg_robots[i].getAttribute('angle'));
+        var name = String(pg_walls[i].getAttribute('name'));
+        var id = (pg_robots[i].getAttribute('nodeId'));
+        var type = pg_robots[i].getAttribute('type');
+        
+        console.log(x_pos,y_pos,port,angle,name,id);
+        addThymio(gui,x_pos,y_pos,port,angle,name,id);
       }
 
   };
