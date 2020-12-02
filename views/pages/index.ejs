@@ -30,6 +30,7 @@ const scene = new THREE.Scene();
 const gui = new GUI();
 var   selected_mesh = new THREE.MeshPhongMaterial();
 var   camera = new THREE.PerspectiveCamera();
+var   mesh = new THREE.Mesh();
 
 function makeXYZGUI(gui, vector3, name, onChangeFn, scale) 
 {
@@ -120,11 +121,15 @@ function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
 
 }
 
-function addPlane(mesh)
+
+function addPlane(gui,w,h,color,groundTexture)
 {
-    const planeSize = 40;
+    const planeSize = w*h;
+    console.log(planeSize);
 
     const loader = new THREE.TextureLoader();
+    if(groundTexture)
+      console.log("C'ho testura");
     const texture = loader.load('resources/images/checker.png');
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -132,7 +137,7 @@ function addPlane(mesh)
     const repeats = planeSize / 2;
     texture.repeat.set(repeats, repeats);
 
-    const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+    const planeGeo = new THREE.PlaneBufferGeometry(w, h);
     const planeMat = new THREE.MeshPhongMaterial({
       map: texture,
       side: THREE.DoubleSide,
@@ -161,13 +166,8 @@ function main() {
 
   addCamera(0, 0, 0, 0, 0, 0);
 
- 
-
   scene.background = new THREE.Color('black');
-  var mesh = new THREE.Mesh();
-  {
-    addPlane(mesh)
-  }
+  addPlane(gui, 6.32,6.32)
 
   class ColorGUIHelper {
     constructor(object, prop) {
@@ -309,9 +309,9 @@ function main() {
     var parser = new DOMParser();
     var xmlDoc =  parser.parseFromString(this.result,"text/xml");
 
-    
-
+  
     var pg_camera = xmlDoc.getElementsByTagName("camera")[0];
+    if(pg_camera)
     {
       var x_pos = Number(pg_camera.getAttribute('x'))/ 10;
         var y_pos = Number(pg_camera.getAttribute('y'))/ 10;
@@ -321,25 +321,36 @@ function main() {
         addCamera(gui,x_pos,y_pos,altitude,yaw,pitch)/ 10;
     }
 
+    var pg_plane = xmlDoc.getElementsByTagName("world")[0];
+    if(pg_plane)
+    {
+        var x_pos = Number(pg_plane.getAttribute('w'))/ 10;
+        var y_pos = Number(pg_plane.getAttribute('h'))/ 10;
+        var color = Number(pg_plane.getAttribute('color'));
+        var groundTexture = Number(pg_plane.getAttribute('groundTexture'));
+        addPlane(gui,x_pos,y_pos,color,groundTexture);
+    }
+
     var pg_walls = xmlDoc.getElementsByTagName("wall");
       
-      for (var i = 0, len = pg_walls.length; i < len; i++) {
-        
-        var x_pos = Number(pg_walls[i].getAttribute('x'))/ 10;
-        var y_pos = Number(pg_walls[i].getAttribute('y'))/ 10;
-        var x_scale = Number(pg_walls[i].getAttribute('l1')) / 10;
-        var y_scale = Number(pg_walls[i].getAttribute('l2'))/ 10;
-        var z_scale = Number(pg_walls[i].getAttribute('h'))/ 10;
-        var angle = Number(pg_walls[i].getAttribute('angle'));
+    for (var i = 0, len = pg_walls.length; i < len; i++) 
+    {
+    
+      var x_pos = Number(pg_walls[i].getAttribute('x'))/ 10;
+      var y_pos = Number(pg_walls[i].getAttribute('y'))/ 10;
+      var x_scale = Number(pg_walls[i].getAttribute('l1')) / 10;
+      var y_scale = Number(pg_walls[i].getAttribute('l2'))/ 10;
+      var z_scale = Number(pg_walls[i].getAttribute('h'))/ 10;
+      var angle = Number(pg_walls[i].getAttribute('angle'));
 
-        addWall(gui, x_pos,y_pos,x_scale,y_scale,z_scale,angle);
-
-      }
+      addWall(gui, x_pos,y_pos,x_scale,y_scale,z_scale,angle);
+    }
 
 
 
       var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
-      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+      for (var i = 0, len = pg_cylinders.length; i < len; i++) 
+      {
         var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
         var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
         var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
@@ -349,18 +360,8 @@ function main() {
 
       }
 
-      var pg_thymios = xmlDoc.getElementsByTagName("robot");
-      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
-        var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
-        var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
-        var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
-        var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
 
-
-
-      }
-
-       var pg_robots = xmlDoc.getElementsByTagName("robot");
+      var pg_robots = xmlDoc.getElementsByTagName("robot");
       
       for (var i = 0, len = pg_robots.length; i < len; i++) 
       {
@@ -374,7 +375,7 @@ function main() {
         var type = pg_robots[i].getAttribute('type');
         // console.log(x_pos,y_pos,port,angle,name,id);
         // addEpuck(gui,x_pos,y_pos,port,angle,name,id);
-        if(type == 'e-puck')
+        if(type == "e-puck")
           addEpuck(gui,x_pos,y_pos,port,angle,name,id);
         else
           addThymio(gui,x_pos,y_pos,port,angle,name,id);
