@@ -42,7 +42,6 @@ function makeXYZGUI(gui, vector3, name, onChangeFn, scale)
 
 function addThymio(gui,x_pos,y_pos,port,angle,name,id)
 {
-
   
   var stlLoader = new STLLoader();
   stlLoader.load( '/resources/models/thymio_2/a_thymio_2.stl', function ( geometry ) {
@@ -55,6 +54,21 @@ function addThymio(gui,x_pos,y_pos,port,angle,name,id)
     scene.add( model );
   });
 
+}
+function addEpuck()
+{
+  const mtlLoader = new MTLLoader();
+  mtlLoader.load('/resources/models/epuck/epuck.mtl', (mtlParseResult) => {
+    var objLoader = new OBJLoader2();
+    objLoader.load( '/resources/models/epuck/epuck.obj', function ( geometry ) {
+    var model = new THREE.Mesh( geometry, mtlParseResult );
+    model.position.set(x_pos,0,y_pos);
+    model.rotation.set(0,angle,0);    
+    // model.scale.set(0.08, 0.08, 0.08);
+    makeXYZGUI(gui, model.position, String(Math.random()));
+    scene.add( model );
+    });
+  });
 }
 
 function addCamera(gui, x_pos,y_pos,altitude,yaw,pitch){
@@ -106,6 +120,27 @@ function addWall(gui,x_pos,y_pos,x_scale,y_scale,z_scale,angle)
 
 }
 
+function addPlane(mesh)
+{
+    const planeSize = 40;
+
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load('resources/images/checker.png');
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.NearestFilter;
+    const repeats = planeSize / 2;
+    texture.repeat.set(repeats, repeats);
+
+    const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+    const planeMat = new THREE.MeshPhongMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+    });
+    mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.rotation.x = Math.PI * -.5;
+    scene.add(mesh);
+}
 
 function main() {
   
@@ -131,24 +166,7 @@ function main() {
   scene.background = new THREE.Color('black');
   var mesh = new THREE.Mesh();
   {
-    const planeSize = 40;
-
-    const loader = new THREE.TextureLoader();
-    const texture = loader.load('resources/images/checker.png');
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.magFilter = THREE.NearestFilter;
-    const repeats = planeSize / 2;
-    texture.repeat.set(repeats, repeats);
-
-    const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
-    const planeMat = new THREE.MeshPhongMaterial({
-      map: texture,
-      side: THREE.DoubleSide,
-    });
-    mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.rotation.x = Math.PI * -.5;
-    scene.add(mesh);
+    addPlane(mesh)
   }
 
   class ColorGUIHelper {
@@ -320,27 +338,27 @@ function main() {
 
 
 
-      // var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
-      // for (var i = 0, len = pg_cylinders.length; i < len; i++) {
-      //   var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
-      //   var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
-      //   var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
-      //   var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
+      var pg_cylinders = xmlDoc.getElementsByTagName("cylinder");
+      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+        var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
+        var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
+        var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
+        var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
 
-      //   addCylinder(gui,x_pos,y_pos,height,ray);
+        addCylinder(gui,x_pos,y_pos,height,ray);
 
-      // }
+      }
 
-      // var pg_thymios = xmlDoc.getElementsByTagName("robot");
-      // for (var i = 0, len = pg_cylinders.length; i < len; i++) {
-      //   var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
-      //   var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
-      //   var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
-      //   var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
+      var pg_thymios = xmlDoc.getElementsByTagName("robot");
+      for (var i = 0, len = pg_cylinders.length; i < len; i++) {
+        var x_pos = Number(pg_cylinders[i].getAttribute('x'))/ 10;
+        var y_pos = Number(pg_cylinders[i].getAttribute('y'))/ 10;
+        var height = Number(pg_cylinders[i].getAttribute('h'))/ 10;
+        var ray = Number(pg_cylinders[i].getAttribute('r'))/ 10;
 
 
 
-      // }
+      }
 
        var pg_robots = xmlDoc.getElementsByTagName("robot");
       
@@ -351,12 +369,16 @@ function main() {
         var y_pos = Number(pg_robots[i].getAttribute('y'))/ 10;
         var port = pg_robots[i].getAttribute('port');
         var angle = Number(pg_robots[i].getAttribute('angle'));
-        var name = String(pg_walls[i].getAttribute('name'));
+        var name = String(pg_robots[i].getAttribute('name'));
         var id = (pg_robots[i].getAttribute('nodeId'));
         var type = pg_robots[i].getAttribute('type');
-        
-        console.log(x_pos,y_pos,port,angle,name,id);
-        addThymio(gui,x_pos,y_pos,port,angle,name,id);
+        // console.log(x_pos,y_pos,port,angle,name,id);
+        // addEpuck(gui,x_pos,y_pos,port,angle,name,id);
+        if(type == 'e-puck')
+          addEpuck(gui,x_pos,y_pos,port,angle,name,id);
+        else
+          addThymio(gui,x_pos,y_pos,port,angle,name,id);
+
       }
 
   };
